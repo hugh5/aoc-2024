@@ -1,62 +1,49 @@
 import sys
+from collections import deque
 
 
 def solution():
-    line = sys.stdin.read().strip()
-    files = []
+    data = map(int, sys.stdin.read().strip())
+    part1 = []
+    part2 = []
+    free_positions = deque()
+    free_positions2 = []
 
-    for i, num in enumerate(map(int, line)):
+    file_id = 0
+    file_position = 0
+    for i, num in enumerate(data):
         if i % 2 == 0:
-            files.extend([i//2]*num)
+            part1.extend([file_id] * num)
+            part2.append((file_position, num))
+            file_position += num
+            file_id += 1
         else:
-            files.extend([None]*num)
+            free_positions.extend(range(len(part1), len(part1) + num))
+            free_positions2.extend(range(len(part1), len(part1) + num))
+            part1.extend([-1] * num)
+            file_position += num
 
-    part1 = list(files)
-    left = part1.index(None)
-    right = len(part1) - 1
-    while left < right:
-        while part1[right] is None and right > left:
-            right -= 1
-        if right <= left:
-            break
-        part1[left] = part1[right]
-        part1[right] = None
-        left = part1.index(None, left)
+    highest_pos = len(part1) - 1
+    while len(free_positions) > 0 and free_positions[0] < highest_pos:
+        part1[free_positions.popleft()] = part1[highest_pos]
+        part1[highest_pos] = -1
+        while highest_pos >= 0 and part1[highest_pos] == -1:
+            highest_pos -= 1
 
-    part1_res = 0
-    for i, file in enumerate(part1):
-        if file is not None:
-             part1_res += i * file
+    for fid in range(len(part2) - 1, -1, -1):
+        file_pos, size = part2[fid]
+        for i in range(len(free_positions2) - size + 1):
+            if free_positions2[i] > file_pos:
+                break
+            if free_positions2[i:i + size] == list(range(free_positions2[i], free_positions2[i] + size)):
+                part2[fid] = (free_positions2[i], size)
+                free_positions2[i:i + size] = []
+                break
 
-    part2 = list(files)
-    rev = list(reversed(part2))
-
-    def find_block(max_i, size):
-        i = 0
-        while i + size <= max_i:
-            if part2[i:i+size] == [None] * size:
-                return i
-            i += 1
-        return -1
-
-    file_id = part2[len(part2)-1]
-
-    while file_id >= 0:
-        left = part2.index(file_id)
-        right = len(rev) - 1 - rev.index(file_id)
-        block_size = right - left + 1
-        i = find_block(left, block_size)
-        if i != -1:
-            part2[i:i+block_size] = [file_id] * block_size
-            part2[left:left+block_size] = [None] * block_size
-        file_id -= 1
-
-    part2_res = 0
-    for i, file in enumerate(part2):
-        if file is not None:
-            part2_res += i * file
-
-    return part1_res, part2_res
+    return (
+        sum(map(lambda x: x[0] * x[1] if x[1] != -1 else 0, enumerate(part1))),
+        sum(map(lambda x: sum(map(lambda i: i * x[0], range(x[1][0], x[1][0] + x[1][1]))), enumerate(part2)))
+    )
 
 
 if __name__ == '__main__':
